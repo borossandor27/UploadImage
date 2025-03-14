@@ -1,11 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -13,27 +8,56 @@ namespace UploadImage
 {
     public partial class Form1 : Form
     {
-        string[] imagesUrls;
-        string baseUrl = "http://localhost:5000/";
+        List<User> users = new List<User>(); // Inicializáljuk, hogy ne legyen null
+        string baseUrl = "http://localhost:5000";
         HttpClient client = new HttpClient();
+
         public Form1()
         {
             InitializeComponent();
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private async void Form1_Load(object sender, EventArgs e)
         {
-            getImages();
+            await getImages(); // Megvárjuk az adatok lekérését
+            DisplayImages(); // Csak utána jelenítjük meg a képeket
         }
 
-        private async void getImages()
+        private async Task getImages()
         {
-            
-            var response = await client.GetAsync("http://localhost:3000/ugyfelek"); // a teljes tartalmat lekérjük
-            var jsonString = await response.Content.ReadAsStringAsync(); // a tartalmat stringgé alakítjuk
-            var ugyfelek = Ugyfel.FromJson(jsonString);
-            listBox1.Items.AddRange(ugyfelek.ToArray());
-            ugyfelek.ToJson();
+            string apiUrl = $"{baseUrl}/uploads";
+            var response = await client.GetAsync(apiUrl);
+            var jsonString = await response.Content.ReadAsStringAsync();
+            users = User.FromJson(jsonString);
+        }
+
+        private void DisplayImages()
+        {
+            if (users == null || users.Count == 0)
+                return;
+
+            foreach (var user in users)
+            {
+                PictureBox pictureBox = new PictureBox
+                {
+                    SizeMode = PictureBoxSizeMode.StretchImage,
+                    Width = 100, // Példa méret
+                    Height = 100,
+                    Left = 10,  // Példa elhelyezés
+                    Top = 10 + (users.IndexOf(user) * 110) // Minden kép alatt kicsit lejjebb jelenjen meg
+                };
+
+                try
+                {
+                    string imageUrl = $"{baseUrl}{user.ImageUrl}";
+                    pictureBox.Load(imageUrl);
+                    this.Controls.Add(pictureBox);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Hiba a kép betöltésekor: {ex.Message}");
+                }
+            }
         }
     }
 }
