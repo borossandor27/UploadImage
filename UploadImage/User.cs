@@ -17,6 +17,10 @@ namespace UploadImage
 
     public partial class User
     {
+        public User()
+        {
+        }
+
         [JsonProperty("id")]
         public long Id { get; set; }
 
@@ -31,6 +35,7 @@ namespace UploadImage
 
         [JsonProperty("created_at")]
         public DateTimeOffset CreatedAt { get; set; }
+
     }
 
     public partial class User
