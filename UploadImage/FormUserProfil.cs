@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -36,6 +37,8 @@ namespace UploadImage
             openFileDialog_imageUpload.ReadOnlyChecked = false; // Csak olvasható fájlok engedélyezése
             openFileDialog_imageUpload.Title = "Select an Image File";
             await getUsers(); // Megvárjuk az adatok lekérését
+            // Kép eltávolítása
+            pictureBox_UserProfilImage.Image = null;
         }
 
         private async Task getUsers()
@@ -81,7 +84,7 @@ namespace UploadImage
             }
         }
 
-        private void button_NewUser_Click(object sender, EventArgs e)
+        private async void button_NewUser_Click(object sender, EventArgs e)
         {
             // Új felhasználó létrehozása
             User newUser = new User
@@ -91,23 +94,46 @@ namespace UploadImage
                 ImageUrl = pictureBox_UserProfilImage.ImageLocation,
                 CreatedAt = DateTime.Now
             };
+            await Upload();
+            textBox_id.Text = string.Empty;
+            textBox_Username.Text = string.Empty;
+            textBox_Description.Text = string.Empty;
+            pictureBox_UserProfilImage.Image = null; // Kép eltávolítása
+            textBox_ImageUrl.Text = string.Empty; // Kép URL eltávolítása
+            dateTimePicker_Belepes.Value = DateTime.Now; // Alapértelmezett dátum beállítása
+            await getUsers(); // Frissítjük a felhasználók listáját
         }
         public async Task Upload()
         {
-            string filePath = pictureBox_UserProfilImage.ImageLocation,;
-            string url = "http://localhost:5000/uploads";
+            string filePath = pictureBox_UserProfilImage.ImageLocation;
+            string url = "http://localhost:5000/upload";
 
-            using (var client = new HttpClient())
+            
             using (var form = new MultipartFormDataContent())
             {
                 // szöveges mezők
                 form.Add(new StringContent(textBox_Username.Text), "username");
                 form.Add(new StringContent(textBox_Description.Text), "description");
+                form.Add(new StringContent(textBox_ImageUrl.Text), "imageUrl");
 
                 // fájl hozzáadása
                 var fileStream = File.OpenRead(filePath);
                 var fileContent = new StreamContent(fileStream);
-                fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg"); // vagy image/png stb.
+                fileContent.Headers.ContentType = null;
+                // fájl típusának beállítása
+                switch (Path.GetExtension(filePath))
+                {
+                    case @".jpg":
+                    case @".jpeg":
+                        fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+                        break;
+                    case @".png":
+                        fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+                        break;
+                    default:
+                        break;
+                }
+                 // vagy image/png stb.
                 form.Add(fileContent, "image", Path.GetFileName(filePath));
 
                 // POST kérés küldése
@@ -115,7 +141,15 @@ namespace UploadImage
 
                 // válasz feldolgozása
                 string result = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Válasz: {result}");
+                // A feltöltés eredményének megjelenítése
+                if (response.IsSuccessStatusCode)
+                {
+                    MessageBox.Show("Feltöltés sikeres!");
+                }
+                else
+                {
+                    MessageBox.Show("Hiba történt a feltöltés során: " + result);
+                }
             }
         }
 
@@ -127,6 +161,7 @@ namespace UploadImage
                 string filePath = openFileDialog_imageUpload.FileName;
                 string fileName = System.IO.Path.GetFileName(filePath);
                 pictureBox_UserProfilImage.ImageLocation = filePath; // Kép megjelenítése a PictureBox-ban
+                textBox_ImageUrl.Text = fileName; // Kép URL beállítása
             }
         }
     }

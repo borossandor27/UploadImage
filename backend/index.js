@@ -60,7 +60,17 @@ app.get('/upload', (req, res) => {
 
 // POST /upload – új felhasználó rögzítése és képfájl feltöltése
 // Az uploads mappában lévő képek letöltése
-app.get('/uploads/:filename', (req, res) => {
+app.get('/uploads/:userid', (req, res) => {
+    const sql = 'SELECT imageUrl FROM users WHERE id = ?';
+    db.query(sql, [req.params.userid], (err, results) => {
+        if (err) return res.status(500).json({ error: err });
+        if (results.length > 0) {
+            const imageUrl = results[0].imageUrl;
+            res.json({ imageUrl });
+        } else {
+            res.status(404).json({ error: 'Felhasználó nem található' });
+        }
+    });
     const filePath = path.join(__dirname, 'uploads', req.params.filename);
     res.download(filePath, err => {
         if (err) {
@@ -80,7 +90,7 @@ app.post('/upload', (req, res) => {
         }
 
         const { username, description } = req.body;
-        const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+        const imageUrl = req.file ? `${req.file.filename}` : null;
         const createdAt = new Date();
 
         const sql = 'INSERT INTO users (username, description, imageUrl, created_at) VALUES (?, ?, ?, ?)';
